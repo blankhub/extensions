@@ -12,28 +12,16 @@ export interface Display {
 
 const STORAGE_KEY = "known_displays";
 const QUICK_CONNECT_KEY = "quick_connect_display";
-const MIRROR_SECTION_NAME = "Mirror or extend to";
 
-// AppleScript to scan available displays from System Settings dropdown
-const scanScript = `
-/**
- * Detects system language and returns the appropriate display menu text.
- * This ensures compatibility with non-English macOS systems.
- */
 function getMirrorSectionName(): string {
-  // Check system language environment variables
   const lang = (process.env.LANG || process.env.LANGUAGE || "").toLowerCase();
-
-  // Return Chinese text for Chinese systems
-  if (lang.includes("zh")) {
-    return "镜像或扩展至";
-  }
-
-  // Default to English for all other languages
-  return "Mirror or extend to";
+  return lang.includes("zh") ? "镜像或扩展至" : "Mirror or extend to";
 }
 
 const MIRROR_SECTION_NAME = getMirrorSectionName();
+
+const scanScript = `
+set mirrorSectionName to (system attribute "Mirror_Section_Name")
 
 do shell script "open -b com.apple.systempreferences /System/Library/PreferencePanes/Displays.prefPane"
 
@@ -67,11 +55,9 @@ tell application "System Events"
     
     repeat until popUpButton is not missing value or loopCount >= maxAttempts
       try
-        -- Tahoe (macOS 26+)
         set popUpButton to menu button 1 of group 1 of group 3 of splitter group 1 of group 1 of window 1
       on error
         try
-          -- Pre-Tahoe
           set popUpButton to pop up button 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
         on error
           set popUpButton to missing value
@@ -86,11 +72,9 @@ tell application "System Events"
       return ""
     end if
 
-    -- Click to open the menu
     click popUpButton
     delay 0.3
     
-    -- Use try-based check instead of "exists" which throws -1700 on AXMenuButton
     set menuWait to 0
     set menuReady to false
     repeat until menuReady or menuWait >= 30
@@ -126,7 +110,6 @@ tell application "System Events"
       end repeat
     end tell
 
-    -- Press escape to close dropdown
     key code 53
   end tell
 end tell
@@ -138,7 +121,6 @@ set AppleScript's text item delimiters to "|||"
 return deviceNames as string
 `;
 
-// Scan displays from System Settings dropdown
 export async function scanDisplaysFromSystem(): Promise<Display[]> {
   try {
     const deeplink = `raycast://extensions/${environment.ownerOrAuthorName}/${environment.extensionName}/connect-to-display`;
@@ -162,7 +144,6 @@ export async function scanDisplaysFromSystem(): Promise<Display[]> {
         lastConnected: undefined,
       }));
 
-    // Merge with stored displays to preserve lastConnected times
     const stored = await getStoredDisplays();
     return displays.map((d) => {
       const existing = stored.find((s) => s.name === d.name);
@@ -174,7 +155,6 @@ export async function scanDisplaysFromSystem(): Promise<Display[]> {
   }
 }
 
-// Get stored displays from local storage
 async function getStoredDisplays(): Promise<Display[]> {
   try {
     const stored = await LocalStorage.getItem<string>(STORAGE_KEY);
@@ -187,12 +167,10 @@ async function getStoredDisplays(): Promise<Display[]> {
   return [];
 }
 
-// Get known displays from local storage (for display list)
 export async function getAvailableDisplays(): Promise<Display[]> {
   return getStoredDisplays();
 }
 
-// Save a display to known list
 export async function saveDisplay(display: Display): Promise<void> {
   const displays = await getAvailableDisplays();
   const existingIndex = displays.findIndex((d) => d.name === display.name);
@@ -206,14 +184,12 @@ export async function saveDisplay(display: Display): Promise<void> {
   await LocalStorage.setItem(STORAGE_KEY, JSON.stringify(displays));
 }
 
-// Remove a display from known list
 export async function removeDisplay(name: string): Promise<void> {
   const displays = await getAvailableDisplays();
   const filtered = displays.filter((d) => d.name !== name);
   await LocalStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 }
 
-// Update last connected time
 export async function markDisplayConnected(name: string): Promise<void> {
   const displays = await getAvailableDisplays();
   const display = displays.find((d) => d.name === name);
@@ -222,8 +198,6 @@ export async function markDisplayConnected(name: string): Promise<void> {
     await LocalStorage.setItem(STORAGE_KEY, JSON.stringify(displays));
   }
 }
-
-// --- Quick Connect ---
 
 export async function getQuickConnectDisplay(): Promise<string | undefined> {
   const stored = await LocalStorage.getItem<string>(QUICK_CONNECT_KEY);
