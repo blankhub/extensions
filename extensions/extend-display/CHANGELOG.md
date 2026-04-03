@@ -1,6 +1,6 @@
 # Extend Display Changelog
 
-## [Chinese Language Support] -2026-04-03
+## [Chinese Language Support] - 2026-04-03
 
 Fixed compatibility issue with Chinese macOS systems
   
