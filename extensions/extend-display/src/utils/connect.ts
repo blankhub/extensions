@@ -9,7 +9,25 @@ import {
 const execFileAsync = promisify(execFile);
 const execAsync = promisify(exec);
 
-const MIRROR_SECTION_NAME = "Mirror or extend to";
+/**
+ * Detects system language and returns the appropriate display menu text.
+ * This ensures compatibility with non-English macOS systems.
+ */
+function getMirrorSectionName(): string {
+  // Check system language environment variables
+  const lang = (process.env.LANG || process.env.LANGUAGE || "").toLowerCase();
+  
+  // Return Chinese text for Chinese systems
+  if (lang.includes("zh")) {
+    return "镜像或扩展至";
+  }
+  
+  // Default to English for all other languages
+  return "Mirror or extend to";
+}
+
+const MIRROR_SECTION_NAME = getMirrorSectionName();
+
 
 const connectScript = `
 do shell script "open -b com.apple.systempreferences /System/Library/PreferencePanes/Displays.prefPane"
